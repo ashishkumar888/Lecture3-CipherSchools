@@ -1,0 +1,193 @@
+// Dependencies and imports
+import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
+import SocketIOClient from 'socket.io-client';
+
+// App component
+function App() {
+  const [messages, setMessages] = useState([]); // Stores chat messages
+  const [username, setUsername] = useState(''); // Stores user's username
+
+  // Connect to Socket.io server
+  useEffect(() => {
+    const socket = SocketIOClient('http://localhost:3001');
+    socket.on('message', (message) => setMessages([...messages, message])); // Receive messages from server
+    return () => socket.disconnect(); // Disconnect on component unmount
+  }, []);
+
+  // Handle sending messages
+  const sendMessage = (message) => {
+    if (message) {
+      socket.emit('message', message, username); // Send message to server
+      setMessages([...messages, { user: username, message }]); // Add message to local state
+    }
+  };
+
+  // Handle username input
+  const handleUsernameChange = (event) => setUsername(event.target.value);
+
+  // Render chat interface
+  return (
+    <div className="App">
+      <h1>Real-Time Chat App</h1>
+      <input
+        type="text"
+        placeholder="Enter your username"
+        value={username}
+        onChange={handleUsernameChange}
+      />
+      <ul>
+        {messages.map((message) => (
+          <li key={message.id}>
+            {message.user}: {message.message}
+          </li>
+        ))}
+      </ul>
+      <input
+        type="text"
+        placeholder="Type your message here..."
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') sendMessage(event.target.value);
+        }}
+      />
+      <button onClick={() => sendMessage(document.querySelector('input').value)}>
+        Send message
+      </button>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
+
+
+
+socket.on('user joined', (username) => {
+  setMessages([...messages, { system: `${username} joined the chat` }]);
+});
+
+socket.on('user left', (username) => {
+  setMessages([...messages, { system: `${username} left the chat` }]);
+});
+
+
+const [isPrivateMessage, setIsPrivateMessage] = useState(false);
+const [privateMessageTo, setPrivateMessageTo] = useState('');
+
+const handlePrivateMessageToggle = () => setIsPrivateMessage(!isPrivateMessage);
+
+const handlePrivateMessageRecipient = (username) => {
+  setPrivateMessageTo(username);
+  setIsPrivateMessage(true);
+};
+
+const sendPrivateMessage = (message) => {
+  if (message) {
+    socket.emit('private message', { message, to: privateMessageTo });
+    setMessages([...messages, { user: 'Me', message, to: privateMessageTo }]);
+  }
+};
+
+const useStyles = makeStyles((theme) => ({
+  app: {
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: '100vh',
+  },
+  messages: {
+    listStyle: 'none',
+    padding: 0,
+    margin: 0,
+  },
+  message: {
+    margin: '10px',
+    border: '1px solid #ddd',
+    borderRadius: '5px',
+    padding: '10px',
+  },
+  systemMessage: {
+    fontStyle: 'italic',
+    color: '#aaa',
+  },
+  input: {
+    width: '300px',
+    padding: '10px',
+    borderRadius: '5px',
+    margin: '10px',
+  },
+  button: {
+    padding: '10px',
+    borderRadius: '5px',
+    cursor: 'pointer',
+  },
+}));
+
+const classes = useStyles();
+return (
+  <div className={classes.app}>
+    <h1>Real-Time Chat App</h1>
+    <input
+      type="text"
+      placeholder="Enter your username"
+      value={username}
+      onChange={handleUsernameChange}
+      className={classes.input}
+    />
+    <ul className={classes.messages}>
+      {messages.map((message) => (
+        <li key={message.id} className={classes.message}>
+          {message.system ? (
+            <span className={classes.systemMessage}>{message.message}</span>
+          ) : (
+            <>
+              <b>{message.user}:</b> {message.message}
+            </>
+          )}
+        </li>
+      ))}
+    </ul>
+    {isPrivateMessage && (
+      <div>
+        <input
+          type="text"
+          placeholder="Send private message to..."
+          value={privateMessageTo}
+          onChange={(event) => setPrivateMessageTo(event.target.value)}
+          className={classes.input}
+        />
+        <input
+          type="text"
+          placeholder="Type your private message..."
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') sendPrivateMessage(event.target.value);
+          }}
+          className={classes.input}
+        />
+        <button
+          onClick={handlePrivateMessageToggle}
+          className={classes.button}
+        >
+          {isPrivateMessage ? 'Close Private Message' : 'Send Public Message'}
+        </button>
+      </div>
+    )}
+    {!isPrivateMessage && (
+      <input
+        type="text"
+        placeholder="Type your message here..."
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') sendMessage(event.target.value);
+        }}
+        className={classes.input}
+      />
+    )}
+    <button onClick={() => sendMessage(document.querySelector('input').value)}>
+      {isPrivateMessage ? 'Send Private Message' : 'Send Message'}
+    </button>
+  </div>
+);
+
+ReactDOM.render(<App />, document.getElementById('root'));
+
+
